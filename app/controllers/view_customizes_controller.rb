@@ -1,5 +1,6 @@
 class ViewCustomizesController < ApplicationController
   layout 'admin'
+  self.main_menu = false
 
   before_action :require_admin
   before_action :find_view_customize, :except => [:index, :new, :create, :update_all]
