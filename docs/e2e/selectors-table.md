@@ -1,6 +1,6 @@
 # Elements per selector (manager)
 
-Run 2026-10-06T19:42:18.900Z against http://127.0.0.1:3000.
+Run 2026-10-06T19:46:59.389Z against http://127.0.0.1:3000.
 
 | selector | home | issue list | issue | new issue | my account |
 |---|---|---|---|---|---|
@@ -13,11 +13,11 @@ Run 2026-10-06T19:42:18.900Z against http://127.0.0.1:3000.
 | `#header` | 1 | 1 | 1 | 1 | 1 |
 | `#main-menu` | 0 | 1 | 1 | 1 | 0 |
 | `.icon` | 1 | 12 | 25 | 2 | 7 |
-| `[class*="icon-"]` | 7 | 62 | 133 | 21 | 25 |
-| `svg.icon-svg` | 5 | 27 | 54 | 13 | 12 |
+| `[class*="icon-"]` | 7 | 65 | 133 | 21 | 25 |
+| `svg.icon-svg` | 5 | 28 | 54 | 13 | 12 |
 | `.gravatar-with-child` | 0 | 0 | 0 | 0 | 0 |
 | `.avatar-with-child` | 0 | 0 | 1 | 0 | 0 |
-| `.subject` | 0 | 5 | 4 | 0 | 0 |
+| `.subject` | 0 | 6 | 4 | 0 | 0 |
 | `.contextual` | 0 | 1 | 9 | 0 | 1 |
 | `fieldset` | 0 | 3 | 4 | 0 | 5 |
 | `legend` | 0 | 3 | 4 | 0 | 5 |

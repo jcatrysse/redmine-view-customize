@@ -20,14 +20,20 @@ what is left. Written 2026-10-06 from a measured analysis (report at the bottom)
 | Upstream | onozaty/redmine-view-customize master @ cdec221 (2026-07-05, tag v3.6.0) |
 | Runs on Redmine 7 as is | JA |
 | Upstream sync | SYNC AANBEVOLEN: installeer v3.6.0 (tag v3.6.0, cdec221825f0a29c3babe2aa501e062fecbdc97a): SVG-iconen (3.5.3/3.5.4) en verwijdering van activerecord-compatible_legacy_migration voor Rails 8.1 (7f257c7); geen nieuwe migratie |
-| After sync | n.v.t. |
+| After sync | Branch is v3.6.0 plus the fixes below (done 2026-10-06) |
 | Complexity (1 trivial .. 5 rewrite) | 1 |
 | Measured on | Redmine 7.0.1 (7.0-stable-GEOxyz + latest 7.0-stable), Rails 8.1.3.1, Ruby 3.3.6, PostgreSQL 16 and MariaDB 10.11 |
 | Branch head when this file was written | `8466e5e` |
 
 ## Already on this branch
 
-- nothing: the branch equals the branch GEOxyz runs today.
+- v3.6.0 (cdec221) is the base, so the upstream sync is done; migrations are a no-op.
+- `main_menu = false` on the plugin controller (stray application menu above the admin pages on 7.0 and 5.1), with tests.
+- Duplicate id on the plugin setting (label did not toggle the option), with a test.
+- Controller tests (authorization on every action, CRUD, validation, enable/disable all), 20 runs instead of 11.
+- e2e scenarios in `test/e2e/` (crud, insertion, permissions, context, selectors), screenshots in `docs/e2e/`.
+- `.codex/test_setup.sh`: psql as postgres when started as root.
+- Snippet audit: `docs/SNIPPET-AUDIT.md` and `docs/audit_snippets.rb`.
 
 ## Work list for the migration session
 
@@ -40,11 +46,82 @@ In this order: things that break, security, the GEOxyz changes, the open items, 
 3. elke geraakte snippet testen op een 7.0-testinstance op de paden uit path_pattern
 4. v3.6.0 installeren en bundle install draaien (Gemfile-gem valt weg); redmine:plugins:migrate is een no-op
 
+**Done (2026-10-06)**: item 4 (v3.6.0 is the base; no gem to install), items 2 and 3 as far as possible without production data (the audit script and the measured selector table, see `docs/SNIPPET-AUDIT.md`; running it on the real export is left to the person upgrading), checks 5, 6 and 7 below. Item 1 was done by Jan (the fork).
+
 **Checks**
 
 5. Run the plugin's whole test suite on Redmine 7.0-stable-GEOxyz with PostgreSQL AND MariaDB, and once on 5.1-stable if the branch is meant to stay 5.1-compatible.
 6. Check Redmine 7 webhooks against this plugin (see "Rules"), and note the result here even if nothing is needed.
 7. Verify every feature of the plugin by hand on a running Redmine 7 (screenshots).
+
+## Results (2026-10-06, Redmine 7.0.1 = 7.0-stable-GEOxyz, Rails 8.1, Ruby 3.3.6)
+
+| | PostgreSQL 16.15 | MariaDB 10.11.14 | Redmine 5.1-stable, Ruby 3.2.6, PostgreSQL |
+|---|---|---|---|
+| Plugin tests, baseline (v3.6.0) | 11 runs, 0 failures | not run before the changes | not run |
+| Plugin tests, now | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 67 assertions, 0 failures, 0 errors |
+| Migrations down to 0 and up (8) | OK | OK | n/a (set up through the same migrations) |
+| e2e: smoke / core / plugin scenarios | 15 / 6 / 38 screenshots, 0 problems | same scenarios, 0 problems (pictures not kept, identical pages) | plugin scenarios 38 screenshots, 0 problems, pictures in `docs/e2e/redmine-5.1/` |
+| Server mode | production (eager load, compiled assets) | production | production |
+
+New tests fail without their fix (checked: `main_menu` test and the settings id test fail on the old code).
+
+Baseline before any change (PostgreSQL): minitest 11 runs 0 failures; smoke 15 pages, core 6 flows, 0 problems.
+
+## Inventory of functions
+
+All functions are administrator functions; the plugin defines no project permissions or project module.
+
+| function | how a user reaches it | scenario | screenshots (`docs/e2e/`) |
+|---|---|---|---|
+| Admin menu entry with SVG icon | Administration > View customize | crud | `crud-admin-menu` |
+| List, sort, comment-or-code column, disabled/private row styling, empty state | /view_customizes | crud | `crud-empty`, `crud-list`, `crud-list-sorted` |
+| Create, with validation (blank code, invalid path or project regex) | New view customize | crud | `crud-invalid`, `crud-invalid-project`, `crud-created` |
+| Show with syntax highlighting, edit, update (and refused update) | list > id > Edit | crud | `crud-edited`, `crud-edit-invalid` |
+| Delete | show > Delete | crud | `crud-deleted` |
+| Disable all / Enable all | list buttons | crud | `crud-disabled-all`, `crud-enabled-all` |
+| Unknown id | /view_customizes/99999 | crud | `crud-unknown` (404) |
+| Insert JS/CSS/HTML at head, bottom, issue form (also re-run after the ajax rebuild on tracker change), issue detail, issues context menu | any page | insertion | `insertion-home-*`, `insertion-issue-show-*`, `insertion-issue-form-*`, `insertion-context-menu-*` |
+| Path pattern, project pattern | rule fields | insertion | `insertion-project-pattern`, `insertion-project-pattern-refused` |
+| Enabled flag, private flag (author only) | rule fields | insertion | `insertion-home-admin` against `-manager` |
+| Global code on anonymous pages | login page | insertion | `insertion-anonymous` |
+| `ViewCustomize.context` (user, project with roles, issue) | JavaScript | context | `context-context-manager`, `context-context-outsider` |
+| Setting "Automatically create API access key", the key works against the REST API | Administration > Plugins > Configure | context | `context-settings-on`, `context-context-apikey` |
+| Refusal for non-admins (manager with every project permission, reporter, outsider) and anonymous, on every action including POST/PATCH/PUT/DELETE with a valid CSRF token | URLs | permissions | `permissions-index-refused-*`, `permissions-settings-refused-*`, `permissions-anonymous-login`, `permissions-unchanged` |
+| Markup audit of stored snippets | `docs/audit_snippets.rb` | selectors | `docs/e2e/selectors-table.md`, `docs/e2e/redmine-5.1/selectors-table.md` |
+
+No mail, REST endpoints, rake tasks, cron jobs or macros in this plugin. Not testable here: nothing needs credentials.
+
+## Webhooks (Redmine 7)
+
+Checked, nothing needed: the plugin adds no issue data and hides none. It only inserts HTML/JS/CSS into
+views through view hooks and extends `ViewCustomize.context` in the page; the webhook payload comes from the
+API templates (`issues/show.api.rsb`), which call none of the plugin's hooks. Not exercised with a live
+webhook endpoint (core refuses private addresses; the plugin has no part in the payload).
+
+## Findings
+
+- Fixed: stray application menu on the plugin pages (core admin controllers set `main_menu = false`).
+- Fixed: duplicate DOM id on the plugin setting; the label did not toggle the checkbox (also on 5.1).
+- Not changed (upstream behaviour, recorded): the list offers a sort link on "Project pattern" that is not in the
+  `sort_update` list, so it does not sort; `rescue ActiveRecord::StaleObjectError` is dead code (no `lock_version`
+  column); `show` mutates `code` with `gsub!` (not persisted); `destroy` redirects without a notice; the context-menu
+  HTML example in `insertion` shows an entry without icon, which is the snippet's own markup.
+- The hook writes the request path into an HTML comment through `sanitize`: checked with encoded `-->` and `<script>` in the
+  path, the path stays percent-encoded and `sanitize` escapes `>`; raw `<`/`>` are refused by Puma with 400. No XSS.
+- Redmine 7 specifics checked in the browser: `data-method` links with `data-confirm` (Disable/Enable all, Delete) work;
+  `view_issues_context_menu_end` fires under `ContextMenus::IssuesController`; Propshaft assets (`view_customize.css`, SVG sprite) load without a 404.
+- Together with the other GEOxyz plugins: not run (no `RMP_EXTRA_PLUGINS` list was given and the other plugins are not attached to this session); nothing in this plugin touches core classes, so no conflict is expected.
+
+## Open questions for Jan
+
+1. Sudo mode on the plugin's admin pages: an administrator can store arbitrary JavaScript for every user, so
+   `require_sudo_mode` on create/update/update_all/destroy would be defensible. Options: (a) leave as is (upstream,
+   no behaviour change), (b) add sudo mode on writes. Recommendation: (a) now, decide later; (b) changes how admins work.
+2. The sort link on "Project pattern" does nothing (upstream bug). Fix or leave? Recommendation: fix with the next
+   upstream sync (one word in `sort_update`), left alone here to keep the diff minimal.
+3. Which snippets exist in production is unknown here: run `docs/audit_snippets.rb` on the production database and
+   test each hit on a Redmine 7 instance.
 
 ## GEOxyz changes to review or re-apply
 
@@ -54,7 +131,8 @@ None: this branch carries no GEOxyz commits of its own (upstream code only).
 
 Actions the person doing the upgrade must take, or know about, for this plugin:
 
-- bundle install (3.6.0 dropped the activerecord-compatible_legacy_migration gem); migrations are a no-op.
+- bundle install (3.6.0 dropped the activerecord-compatible_legacy_migration gem); `rake redmine:plugins:migrate` is a no-op (all 8 migrations are already applied; down to 0 and up again was tested on PostgreSQL and MariaDB).
+- Run `RAILS_ENV=production bundle exec rails runner plugins/view_customize/docs/audit_snippets.rb` and test every listed snippet (see `docs/SNIPPET-AUDIT.md`).
 - Export the stored snippets and check them against the Redmine 7 markup (header/user menu, #loggedas is gone, CSS icons are gone, sticky issue header duplicates .subject).
 
 ## How to test
