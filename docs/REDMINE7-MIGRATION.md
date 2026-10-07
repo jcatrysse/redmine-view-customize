@@ -50,7 +50,7 @@ In this order: things that break, security, the GEOxyz changes, the open items, 
 
 **Checks**
 
-5. Run the plugin's whole test suite on Redmine 7.0-stable-GEOxyz with PostgreSQL AND MariaDB, and once on 5.1-stable if the branch is meant to stay 5.1-compatible.
+5. Run the plugin's whole test suite on Redmine 7.0-stable-GEOxyz with PostgreSQL (decided 2026-10-07: no MariaDB, no 5.1; both were run once on 2026-10-06 anyway, see Results).
 6. Check Redmine 7 webhooks against this plugin (see "Rules"), and note the result here even if nothing is needed.
 7. Verify every feature of the plugin by hand on a running Redmine 7 (screenshots).
 
@@ -59,7 +59,7 @@ In this order: things that break, security, the GEOxyz changes, the open items, 
 | | PostgreSQL 16.15 | MariaDB 10.11.14 | Redmine 5.1-stable, Ruby 3.2.6, PostgreSQL |
 |---|---|---|---|
 | Plugin tests, baseline (v3.6.0) | 11 runs, 0 failures | not run before the changes | not run |
-| Plugin tests, now | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 67 assertions, 0 failures, 0 errors |
+| Plugin tests, now (2026-10-07: 21 runs, 81 assertions, 0 failures on PostgreSQL) | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 67 assertions, 0 failures, 0 errors |
 | Migrations down to 0 and up (8) | OK | OK | n/a (set up through the same migrations) |
 | e2e: smoke / core / plugin scenarios | 15 / 6 / 38 screenshots, 0 problems | same scenarios, 0 problems (pictures not kept, identical pages) | plugin scenarios 38 screenshots, 0 problems, pictures in `docs/e2e/redmine-5.1/` |
 | Server mode | production (eager load, compiled assets) | production | production |
@@ -75,7 +75,7 @@ All functions are administrator functions; the plugin defines no project permiss
 | function | how a user reaches it | scenario | screenshots (`docs/e2e/`) |
 |---|---|---|---|
 | Admin menu entry with SVG icon | Administration > View customize | crud | `crud-admin-menu` |
-| List, sort, comment-or-code column, disabled/private row styling, empty state | /view_customizes | crud | `crud-empty`, `crud-list`, `crud-list-sorted` |
+| List, sort (including Project pattern), comment-or-code column, disabled/private row styling, empty state | /view_customizes | crud | `crud-empty`, `crud-list`, `crud-list-sorted`, `crud-list-sorted-project`, `crud-list-sorted-project-desc` |
 | Create, with validation (blank code, invalid path or project regex) | New view customize | crud | `crud-invalid`, `crud-invalid-project`, `crud-created` |
 | Show with syntax highlighting, edit, update (and refused update) | list > id > Edit | crud | `crud-edited`, `crud-edit-invalid` |
 | Delete | show > Delete | crud | `crud-deleted` |
@@ -103,8 +103,8 @@ webhook endpoint (core refuses private addresses; the plugin has no part in the 
 
 - Fixed: stray application menu on the plugin pages (core admin controllers set `main_menu = false`).
 - Fixed: duplicate DOM id on the plugin setting; the label did not toggle the checkbox (also on 5.1).
-- Not changed (upstream behaviour, recorded): the list offers a sort link on "Project pattern" that is not in the
-  `sort_update` list, so it does not sort; `rescue ActiveRecord::StaleObjectError` is dead code (no `lock_version`
+- Fixed 2026-10-07 (Jan's decision): the sort link on "Project pattern" did nothing.
+- Not changed (upstream behaviour, recorded): `rescue ActiveRecord::StaleObjectError` is dead code (no `lock_version`
   column); `show` mutates `code` with `gsub!` (not persisted); `destroy` redirects without a notice; the context-menu
   HTML example in `insertion` shows an entry without icon, which is the snippet's own markup.
 - The hook writes the request path into an HTML comment through `sanitize`: checked with encoded `-->` and `<script>` in the
@@ -113,15 +113,20 @@ webhook endpoint (core refuses private addresses; the plugin has no part in the 
   `view_issues_context_menu_end` fires under `ContextMenus::IssuesController`; Propshaft assets (`view_customize.css`, SVG sprite) load without a 404.
 - Together with the other GEOxyz plugins: not run (no `RMP_EXTRA_PLUGINS` list was given and the other plugins are not attached to this session); nothing in this plugin touches core classes, so no conflict is expected.
 
-## Open questions for Jan
+## Decided by Jan, 2026-10-07
 
-1. Sudo mode on the plugin's admin pages: an administrator can store arbitrary JavaScript for every user, so
-   `require_sudo_mode` on create/update/update_all/destroy would be defensible. Options: (a) leave as is (upstream,
-   no behaviour change), (b) add sudo mode on writes. Recommendation: (a) now, decide later; (b) changes how admins work.
-2. The sort link on "Project pattern" does nothing (upstream bug). Fix or leave? Recommendation: fix with the next
-   upstream sync (one word in `sort_update`), left alone here to keep the diff minimal.
-3. Which snippets exist in production is unknown here: run `docs/audit_snippets.rb` on the production database and
-   test each hit on a Redmine 7 instance.
+Full text: `docs/DECISIONS-2026-10-07.md`. General: no 5.1 backports, PostgreSQL only, no deface here (no Gemfile),
+`prepend` instead of `alias_method` (this plugin patches no core method, so nothing to switch), Actions manual only.
+
+| question | Jan's choice | what was done |
+|---|---|---|
+| Sudo mode on the plugin's admin writes (my question 1, from the first report) | not asked of Jan, still open: left as is (upstream), recommendation unchanged | nothing |
+| redmine-view-customize-q1: fix the dead 'Project pattern' sort link now? | B: "Nu meteen herstellen" (De link werkt meteen, maar de branch wijkt iets meer af van de oorspronkelijke code.) | `project_pattern` added to `sort_update`; functional test `test_index_sorts_by_project_pattern` (fails without it); e2e `crud-list-sorted-project*.png` |
+| redmine-view-customize-q2: check the stored production snippets before the upgrade? | B: "Pas na de upgrade herstellen wat stuk blijkt" (Geen werk vooraf, maar kapotte of dubbel werkende snippets vallen pas op bij gebruikers.) | no code; goes under "After the upgrade" |
+
+Together with the other GEOxyz plugins: not run. This plugin only registers view hooks, adds its own
+controller/model and no core patch (`grep alias_method|prepend|class_eval` finds nothing), so a method-patch
+conflict cannot come from it. Left for Jan: run the combined harness once with all plugins installed.
 
 ## GEOxyz changes to review or re-apply
 
@@ -132,7 +137,7 @@ None: this branch carries no GEOxyz commits of its own (upstream code only).
 Actions the person doing the upgrade must take, or know about, for this plugin:
 
 - bundle install (3.6.0 dropped the activerecord-compatible_legacy_migration gem); `rake redmine:plugins:migrate` is a no-op (all 8 migrations are already applied; down to 0 and up again was tested on PostgreSQL and MariaDB).
-- Run `RAILS_ENV=production bundle exec rails runner plugins/view_customize/docs/audit_snippets.rb` and test every listed snippet (see `docs/SNIPPET-AUDIT.md`).
+- Snippets (Jan 2026-10-07: fix only what turns out broken after the upgrade): after the upgrade, run `RAILS_ENV=production bundle exec rails runner plugins/view_customize/docs/audit_snippets.rb` and `docs/SNIPPET-AUDIT.md` to see which snippets mention changed markup; broken or doubled behaviour is repaired then, in the admin screen (no code change in the plugin).
 - Export the stored snippets and check them against the Redmine 7 markup (header/user menu, #loggedas is gone, CSS icons are gone, sticky issue header duplicates .subject).
 
 ## How to test
@@ -166,7 +171,7 @@ results quoted in the analysis come from it.
 1. **Start**: `git fetch && git checkout redmine70-migration && git pull`. Read this whole file,
    including the analysis report at the bottom. Do not reopen decisions recorded here.
 2. **Baseline, before you change anything**:
-   - the plugin's tests on Redmine 7.0-stable-GEOxyz with PostgreSQL and with MariaDB;
+   - the plugin's tests on Redmine 7.0-stable-GEOxyz with PostgreSQL (MariaDB no longer required);
    - a real running Redmine with this plugin (`./.codex/start_server.sh`) and the browser run
      (`./.codex/e2e.sh`: smoke over every page the plugin adds, plus the core issue flows).
    Write the numbers here. Something already broken now is a finding, not your regression.
@@ -180,7 +185,7 @@ results quoted in the analysis come from it.
 5. **Work list**: then the numbered list, in order. One concern per commit.
 6. **Portability**: everything must run on Redmine's supported databases (PostgreSQL,
    MySQL/MariaDB; SQLite where the plugin already supports it). Migrations must be reversible and
-   are run down and up on PostgreSQL and MariaDB.
+   are run down and up on PostgreSQL (MariaDB optional, see Rules).
 7. **Together**: run with the other GEOxyz plugins installed (the migration kit's harness, or
    `RMP_EXTRA_PLUGINS`). A failure that only appears in combination is a finding to record here.
 8. **End to end, visually, every function**: on the real Redmine from `start_server.sh`
@@ -199,7 +204,7 @@ results quoted in the analysis come from it.
      reads them; API through `t.page.request`) and record command and result.
    - Before pictures where behaviour or layout changes: the branch GEOxyz runs today, on
      Redmine 5.1, same scenarios, `RMP_E2E_OUT=docs/e2e/before`.
-   - Run the whole e2e set once on MariaDB as well (`RMP_DB=mariadb`, then `start_server.sh --reset`).
+   - (MariaDB e2e runs are no longer required, see "PostgreSQL only" under Rules.)
 9. **Independent review**: first your own, adversarial: re-read the whole diff as if someone
    else wrote it and you are paid to reject it. Then, **when `OPENAI_API_KEY` is set in the
    session**, `./.codex/openai_review.sh`: it sends the diff of this branch to an OpenAI model
@@ -244,8 +249,13 @@ results quoted in the analysis come from it.
   (on by default: `t.sudo()` in a scenario). The breaker list is in the migration kit's CHECKLIST.md.
 - **Locales**: keep the locales the plugin ships in sync; translate a new key by matching the
   closest existing key in the same file, not from scratch; do not add new languages.
-- **5.1 compatibility**: prefer fixes that also run on Redmine 5.1 so they can be merged early;
-  say so when a fix cannot.
+- **No 5.1 (decided by Jan 2026-10-07)**: GEOxyz goes straight to Redmine 7. No backports, nothing is
+  cherry-picked to the default branch or the branch production runs today, and no code paths that exist only
+  for 5.1. (Existing upstream 5.x/6.x switches in this plugin stay as they are; they cost nothing.)
+- **PostgreSQL only (decided by Jan 2026-10-07)**: production runs PostgreSQL 16. Tests and e2e run on
+  PostgreSQL; keep SQL portable where it costs nothing; a MariaDB-only problem is a note, not a blocker.
+- **Patching core**: a core method that other plugins also patch is patched with `prepend`, never `alias_method`.
+  This plugin patches no core method (view hooks only).
 - **Git**: work on `redmine70-migration` only; never push to the default branch; never force-push
   a branch someone else uses. Descriptive commit messages (what and why). Push after every
   commit, together with the updated status in this file: a cloud session can stop at a usage
@@ -256,7 +266,7 @@ results quoted in the analysis come from it.
 ## Definition of done
 
 - All items of the work list are done or explicitly deferred with a reason, in this file.
-- The plugin's tests are green on Redmine 7.0-stable-GEOxyz with PostgreSQL and MariaDB
+- The plugin's tests are green on Redmine 7.0-stable-GEOxyz with PostgreSQL
   (numbers in this file); boot, production-like eager load, migrations up/down OK.
 - Every function in the inventory exercised end to end on a real running Redmine, with and
   without permissions and on its failure paths; `./.codex/e2e.sh` green; screenshots looked at,

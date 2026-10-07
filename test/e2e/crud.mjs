@@ -75,6 +75,18 @@ await t.settle();
 ensure(t.page.url().includes('sort=insertion_position'), 'sorting by insertion position did not apply');
 await t.shot('list-sorted', 'List sorted by insertion position');
 
+await t.page.click('th a:has-text("Project pattern")');
+await t.settle();
+ensure(t.page.url().includes('sort=project_pattern'), 'sorting by project pattern did not apply');
+let pats = await t.page.locator('td.project_pattern').allInnerTexts();
+ensure(pats.length === 3 && pats[2] === 'e2e-project', `ascending by project pattern: ${JSON.stringify(pats)}`);
+await t.shot('list-sorted-project', 'List sorted by project pattern ascending (empty patterns first)');
+await t.page.click('th a:has-text("Project pattern")');
+await t.settle();
+pats = await t.page.locator('td.project_pattern').allInnerTexts();
+ensure(pats[0] === 'e2e-project', `descending by project pattern: ${JSON.stringify(pats)}`);
+await t.shot('list-sorted-project-desc', 'Second click: descending, the project pattern first');
+
 // edit
 await t.go(`/view_customizes/${id1}/edit`);
 await fill({ code: 'document.title = "VC-ONE-EDITED";', comments: 'edited' });

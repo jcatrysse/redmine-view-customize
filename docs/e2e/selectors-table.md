@@ -1,6 +1,6 @@
 # Elements per selector (manager)
 
-Run 2026-10-06T19:46:59.389Z against http://127.0.0.1:3000.
+Run 2026-10-07T16:06:11.265Z against http://127.0.0.1:3000.
 
 | selector | home | issue list | issue | new issue | my account |
 |---|---|---|---|---|---|
