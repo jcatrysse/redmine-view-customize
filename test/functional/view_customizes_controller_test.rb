@@ -114,4 +114,20 @@ class ViewCustomizesControllerTest < Redmine::ControllerTest
     # Rails answers 404 for this in production
     assert_raises(ActiveRecord::RecordNotFound) { get :show, :params => {:id => 99999} }
   end
+
+  def test_index_sorts_by_project_pattern
+    @request.session[:user_id] = 1
+    ViewCustomize.update_all(:project_pattern => '')
+    ViewCustomize.find(1).update_columns(:project_pattern => 'bbb')
+    ViewCustomize.find(2).update_columns(:project_pattern => 'aaa')
+
+    get :index, :params => {:sort => 'project_pattern,id'}
+    assert_response :success
+    patterns = css_select('table.view_customize td.project_pattern').map(&:text)
+    assert_equal patterns.sort, patterns
+    assert_equal 'aaa', patterns.reject(&:blank?).first
+
+    get :index, :params => {:sort => 'project_pattern:desc'}
+    assert_equal 'bbb', css_select('table.view_customize td.project_pattern').map(&:text).first
+  end
 end
