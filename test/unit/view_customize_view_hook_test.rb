@@ -120,6 +120,21 @@ class ViewCustomizeViewHookTest < ActiveSupport::TestCase
 
   end
 
+  def test_user_custom_field_hidden_from_the_user_is_not_in_the_context
+
+    User.current = User.find(2)
+
+    hidden = UserCustomField.create!(:name => "Hidden grade", :field_format => "string", :visible => false)
+    User.current.custom_field_values = { hidden.id.to_s => "secret value" }
+    User.current.save!
+
+    html = @hook.view_layouts_base_html_head({:request => Request.new("/issues"), :project => @project_ecookbook})
+    assert_no_match(/Hidden grade/, html)
+    assert_no_match(/secret value/, html)
+    assert_match Regexp.new(Regexp.escape("{\"id\":4,\"name\":\"Phone number\"")), html
+
+  end
+
   def test_view_layouts_base_html_head_does_not_echo_the_path
 
     User.current = User.find(1)

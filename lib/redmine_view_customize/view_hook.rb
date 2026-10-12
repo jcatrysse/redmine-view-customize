@@ -129,7 +129,8 @@ module RedmineViewCustomize
           "lastLoginOn" => (user.last_login_on.iso8601 unless user.last_login_on.nil?),
           "groups" => user.groups.map {|group| { "id" => group.id, "name" => group.name }},
           "apiKey" => (user.api_token.value unless user.api_token.nil?),
-          "customFields" => user.custom_field_values.map {|field| { "id" => field.custom_field.id, "name" => field.custom_field.name, "value" => field.value }}
+          # Only the user custom fields the user may see, as core's my/account API does (GEOxyz, 2026-10-12)
+          "customFields" => user.visible_custom_field_values.map {|field| { "id" => field.custom_field.id, "name" => field.custom_field.name, "value" => field.value }}
         }
       }
 
