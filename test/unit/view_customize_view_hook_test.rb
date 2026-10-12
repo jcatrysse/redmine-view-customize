@@ -71,7 +71,6 @@ class ViewCustomizeViewHookTest < ActiveSupport::TestCase
     User.current = User.find(1)
 
     expected = Regexp.escape("\n")
-    expected << Regexp.escape("<!-- [view customize plugin] path:/issues -->\n")
     expected << "("
     expected << Regexp.escape("<link rel=\"stylesheet\" media=\"screen\" href=\"/plugin_assets/view_customize/stylesheets/view_customize.css?")
     expected << "[0-9]+"
@@ -121,16 +120,24 @@ class ViewCustomizeViewHookTest < ActiveSupport::TestCase
 
   end
 
-  def test_view_layouts_base_html_head_xss
+  def test_view_layouts_base_html_head_does_not_echo_the_path
 
     User.current = User.find(1)
 
-    expected = Regexp.escape("\n")
-    expected << Regexp.escape("<!-- [view customize plugin] path:/projects/--&gt;<h1>xss</h1> -->\n")
-    expected << ".+"
+    # A token in the URL (share link, password reset, API key) must not come back in the page source,
+    # and a path with markup must not be echoed either (deliberate divergence from upstream).
+    ["/projects/--><h1>xss<!--/issues",
+     "/reports/shared/s3cr3t-token-123/issues",
+     "/issues?key=0123456789abcdef"].each do |path|
+      html = @hook.view_layouts_base_html_head({:request => Request.new(path), :project => @project_ecookbook})
+      assert_no_match(/view customize plugin/, html)
+      assert_no_match(/s3cr3t-token-123|0123456789abcdef|xss|<h1>/, html)
+      assert_match(/ViewCustomize = \{ context:/, html)
+    end
 
-    html = @hook.view_layouts_base_html_head({:request => Request.new("/projects/--><h1>xss<!--/issues"), :project => @project_ecookbook})
-    assert_match Regexp.new(expected), html
+    # snippets are still matched on the path and inserted
+    html = @hook.view_layouts_base_html_head({:request => Request.new("/issues"), :project => @project_ecookbook})
+    assert_match(/<!-- view customize id:1 -->/, html)
 
   end
 

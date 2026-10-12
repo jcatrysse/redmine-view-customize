@@ -3,9 +3,8 @@ require 'time'
 module RedmineViewCustomize
   class ViewHook < Redmine::Hook::ViewListener
     def view_layouts_base_html_head(context={})
-      path = sanitize(Redmine::CodesetUtil.replace_invalid_utf8(context[:request].path_info));
-
-      html = "\n<!-- [view customize plugin] path:#{path} -->\n"
+      # The request path is deliberately not written into the page: it can hold tokens (GEOxyz, 2026-10-12).
+      html = "\n"
       html << stylesheet_link_tag("view_customize", plugin: "view_customize")
       html << "<script type=\"text/javascript\">\n//<![CDATA[\n"
       html << "ViewCustomize = { context: #{create_view_customize_context(context).to_json} };"
