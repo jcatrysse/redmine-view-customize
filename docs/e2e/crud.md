@@ -1,6 +1,6 @@
 # crud
 
-Run 2026-10-07T16:04:47.769Z against http://127.0.0.1:3000.
+Run 2026-10-12T10:22:55.652Z against http://127.0.0.1:3000.
 
 | screenshot | user | URL | shows |
 |---|---|---|---|
@@ -8,13 +8,13 @@ Run 2026-10-07T16:04:47.769Z against http://127.0.0.1:3000.
 | ![](crud-admin-menu.png) | admin | `/admin` | The administration page lists "View customize" with its SVG icon |
 | ![](crud-invalid.png) | admin | `/view_customizes` | Blank code and a broken regular expression are refused with errors |
 | ![](crud-invalid-project.png) | admin | `/view_customizes` | A broken project pattern is refused |
-| ![](crud-created.png) | admin | `/view_customizes/3` | After create: show page with the highlighted code and a success notice |
+| ![](crud-created.png) | admin | `/view_customizes/19` | After create: show page with the highlighted code and a success notice |
 | ![](crud-list.png) | admin | `/view_customizes` | List: comment when present, else the code; disabled/private rows marked |
 | ![](crud-list-sorted.png) | admin | `/view_customizes?sort=insertion_position%2Cid%3Adesc` | List sorted by insertion position |
 | ![](crud-list-sorted-project.png) | admin | `/view_customizes?sort=project_pattern%2Cinsertion_position%2Cid%3Adesc` | List sorted by project pattern ascending (empty patterns first) |
 | ![](crud-list-sorted-project-desc.png) | admin | `/view_customizes?sort=project_pattern%3Adesc%2Cinsertion_position%2Cid%3Adesc` | Second click: descending, the project pattern first |
-| ![](crud-edited.png) | admin | `/view_customizes/3` | After update: the new code is shown |
-| ![](crud-edit-invalid.png) | admin | `/view_customizes/3` | Update with blank code is refused with an error |
+| ![](crud-edited.png) | admin | `/view_customizes/19` | After update: the new code is shown |
+| ![](crud-edit-invalid.png) | admin | `/view_customizes/19` | Update with blank code is refused with an error |
 | ![](crud-disabled-all.png) | admin | `/view_customizes` | After "Disable all" every row is marked disabled |
 | ![](crud-enabled-all.png) | admin | `/view_customizes` | After "Enable all" no row is disabled |
 | ![](crud-deleted.png) | admin | `/view_customizes` | After deleting all three the list is empty again |

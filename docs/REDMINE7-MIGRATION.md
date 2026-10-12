@@ -59,7 +59,7 @@ In this order: things that break, security, the GEOxyz changes, the open items, 
 | | PostgreSQL 16.15 | MariaDB 10.11.14 | Redmine 5.1-stable, Ruby 3.2.6, PostgreSQL |
 |---|---|---|---|
 | Plugin tests, baseline (v3.6.0) | 11 runs, 0 failures | not run before the changes | not run |
-| Plugin tests, now (2026-10-07: 21 runs, 81 assertions, 0 failures on PostgreSQL) | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 67 assertions, 0 failures, 0 errors |
+| Plugin tests, now (2026-10-12: 21 runs, 99 assertions, 0 failures on PostgreSQL, also with redmine_reporter_dashboards installed) | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 77 assertions, 0 failures, 0 errors | 20 runs, 67 assertions, 0 failures, 0 errors |
 | Migrations down to 0 and up (8) | OK | OK | n/a (set up through the same migrations) |
 | e2e: smoke / core / plugin scenarios | 15 / 6 / 38 screenshots, 0 problems | same scenarios, 0 problems (pictures not kept, identical pages) | plugin scenarios 38 screenshots, 0 problems, pictures in `docs/e2e/redmine-5.1/` |
 | Server mode | production (eager load, compiled assets) | production | production |
@@ -107,8 +107,7 @@ webhook endpoint (core refuses private addresses; the plugin has no part in the 
 - Not changed (upstream behaviour, recorded): `rescue ActiveRecord::StaleObjectError` is dead code (no `lock_version`
   column); `show` mutates `code` with `gsub!` (not persisted); `destroy` redirects without a notice; the context-menu
   HTML example in `insertion` shows an entry without icon, which is the snippet's own markup.
-- The hook writes the request path into an HTML comment through `sanitize`: checked with encoded `-->` and `<script>` in the
-  path, the path stays percent-encoded and `sanitize` escapes `>`; raw `<`/`>` are refused by Puma with 400. No XSS.
+- The hook no longer writes the request path into the page (2026-10-12, see Decided). Before that it did so through `sanitize` (no XSS, but it echoed URL tokens).
 - Redmine 7 specifics checked in the browser: `data-method` links with `data-confirm` (Disable/Enable all, Delete) work;
   `view_issues_context_menu_end` fires under `ContextMenus::IssuesController`; Propshaft assets (`view_customize.css`, SVG sprite) load without a 404.
 - Together with the other GEOxyz plugins: not run (no `RMP_EXTRA_PLUGINS` list was given and the other plugins are not attached to this session); nothing in this plugin touches core classes, so no conflict is expected.
@@ -124,7 +123,9 @@ Full text: `docs/DECISIONS-2026-10-07.md`. General: no 5.1 backports, PostgreSQL
 | redmine-view-customize-q1: fix the dead 'Project pattern' sort link now? | B: "Nu meteen herstellen" (De link werkt meteen, maar de branch wijkt iets meer af van de oorspronkelijke code.) | `project_pattern` added to `sort_update`; functional test `test_index_sorts_by_project_pattern` (fails without it); e2e `crud-list-sorted-project*.png` |
 | redmine-view-customize-q2: check the stored production snippets before the upgrade? | B: "Pas na de upgrade herstellen wat stuk blijkt" (Geen werk vooraf, maar kapotte of dubbel werkende snippets vallen pas op bij gebruikers.) | no code; goes under "After the upgrade" |
 
-Together with the other GEOxyz plugins: not run. This plugin only registers view hooks, adds its own
+| Round 6 (2026-10-12), found by redmine_reporter_dashboards: the head hook wrote `<!-- [view customize plugin] path:... -->` into every page | stop writing the path (full text in `docs/DECISIONS-2026-10-07.md`) | **Deliberate divergence from upstream onozaty/redmine-view-customize**, reason: any token in a URL (report share link, password reset, API key) was echoed into the page source. Path pattern matching is unchanged (server-side), snippets still apply. Unit test `test_view_layouts_base_html_head_does_not_echo_the_path` (fails without the change); the two existing tests that encoded the comment are updated; e2e `insertion` checks the page source of `/issues/1` and the wiki for admin, manager and reporter. With redmine_reporter_dashboards installed (branch redmine70-migration) its `test_no_response_echoes_the_token` fails on the old hook and passes now (share-link flow file: 26 runs, 0 failures). |
+
+Together with the other GEOxyz plugins: only redmine_reporter_dashboards was run (see round 6); the others are not attached. This plugin only registers view hooks, adds its own
 controller/model and no core patch (`grep alias_method|prepend|class_eval` finds nothing), so a method-patch
 conflict cannot come from it. Left for Jan: run the combined harness once with all plugins installed.
 

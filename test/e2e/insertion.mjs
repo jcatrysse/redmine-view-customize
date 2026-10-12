@@ -41,6 +41,12 @@ async function check(who, lookups) {
   await t.go('/projects/e2e-project/issues');
   const outline = await t.page.evaluate(() => getComputedStyle(document.body).outlineStyle);
   ensure(outline === 'solid', `${who} issue list: CSS for /issues$ not applied`);
+  // the page source must not echo the request path (deliberate divergence from upstream, 2026-10-12)
+  for (const u of ['/projects/e2e-project/wiki', '/issues/1']) {
+    const html = await (await t.page.request.get(t.BASE + u)).text();
+    ensure(!/view customize plugin/.test(html) && !/path:\//.test(html), `${who} ${u}: the page source still echoes the request path`);
+    ensure(/<!-- view customize id:\d+ -->/.test(html), `${who} ${u}: no customization marker in the page source`);
+  }
   await t.go('/projects/e2e-project/wiki');
   d = await data();
   ensure(d.vcWiki === '1', `${who} wiki: path-pattern JS must run once (got ${d.vcWiki})`);
