@@ -36,3 +36,11 @@ Jan answered these follow-up questions from the migration report the same way, o
 
 - redmine-view-customize-n2-1 (viewcust 3): Een beheerder kan in deze plugin JavaScript opslaan dat bij elke gebruiker loopt. Redmine 7 kan bij zulke acties eerst opnieuw het wachtwoord vragen, maar deze plugin doet dat niet. Voegen we dat toe?
   Jan chose: "Zo laten" (Niets verandert voor beheerders, gelijk aan de originele plugin.). Already built: keep it and record the decision.
+
+## Round 6, 2026-10-12: the follow-up points of the plan
+
+Jan answered the open points this session recorded in docs/REDMINE7-MIGRATION.md after the earlier rounds, one by one in the coordinating session.
+
+- **The request path in every page** (found by redmine_reporter_dashboards, its Q7): `lib/redmine_view_customize/view_hook.rb` writes `<!-- [view customize plugin] path:#{path} -->` into the `<head>` of every page. Any token or credential in a URL (a report share link, a password reset, an API key in a query string) is echoed back into the page source. Jan's decision: **stop writing the path into the page.** This is a deliberate divergence from upstream onozaty/redmine-view-customize; record it in the plan with the reason. Snippets keep working (the path pattern matching is server-side). Test: a page rendered for a path with a token does not contain the path or the token, and the existing tests stay green. Then confirm with redmine_reporter_dashboards installed that its "no response echoes the token" test passes.
+
+Build it now: one commit with the test that fails without it; plugin tests green alone and with the other GEOxyz plugins; an e2e check that a snippet still applies on its pattern and that the page source no longer shows the path; your own review and `./.codex/openai_review.sh` when OPENAI_API_KEY is set; push; end with a short Dutch report.
