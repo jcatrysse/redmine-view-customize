@@ -71,7 +71,15 @@ module RedmineViewCustomize
       path = Redmine::CodesetUtil.replace_invalid_utf8(context[:request].path_info)
       project = context[:project].identifier if context[:project]
 
-      ViewCustomize.all.order(:id).select {|item| target_customize?(path, project, insertion_position, item)}
+      customizes(context).select {|item| target_customize?(path, project, insertion_position, item)}
+    end
+
+    # Loaded once per request and shared by all insertion points (head, form, issue, context menu, bottom).
+    def customizes(context)
+      env = context[:request].env if context[:request].respond_to?(:env)
+      return ViewCustomize.order(:id).to_a if env.nil?
+
+      env['view_customize.customizes'] ||= ViewCustomize.order(:id).to_a
     end
 
     def target_customize?(path, project, insertion_position, item)
