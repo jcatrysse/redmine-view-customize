@@ -26,6 +26,7 @@ export async function create(t, v) {
   if (v.comments !== undefined) await p.fill('#view_customize_comments', v.comments);
   if (v.enabled !== undefined) await p.setChecked('#view_customize_is_enabled', v.enabled);
   if (v.priv !== undefined) await p.setChecked('#view_customize_is_private', v.priv);
+  if (v.apiKey !== undefined) await p.setChecked('#view_customize_use_api_key', v.apiKey);
   await p.click('#view_customize-form input[name=commit]');
   await t.settle();
   t.check('create customize');

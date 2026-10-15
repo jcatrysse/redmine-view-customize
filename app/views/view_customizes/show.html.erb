@@ -47,6 +47,10 @@
     <td><%=h @view_customize.is_private ? l(:general_text_yes) : l(:general_text_no) %></td>
   </tr>
   <tr>
+    <th><%=h l(:field_use_api_key) %></th>
+    <td><%=h @view_customize.use_api_key ? l(:general_text_yes) : l(:general_text_no) %></td>
+  </tr>
+  <tr>
     <th><%=h l(:field_author) %></th>
     <td><%=h @view_customize.author.name unless @view_customize.author == nil %></td>
   </tr>

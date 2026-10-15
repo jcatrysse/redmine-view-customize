@@ -147,13 +147,15 @@ ViewCustomize = {
 
 For example, to access the user's API access key is `ViewCustomize.context.user.apiKey`.
 
+The API access key is only put into the page when an enabled customization that applies to that page has "Use API access key" ticked (GEOxyz change, Redmine 7 branch); otherwise `apiKey` is `null`, so a script or an XSS on a page that does not need the key cannot read it. The key is never given to the anonymous user. Migration 009 ticks the option for existing customizations whose code contains `apiKey`.
+
 ### API access key
 
 The API access key is created when the "Show" link of the API access key on the My account page is click for the first time.
 
 ![Screenshot of my account](screenshots/my_account.en.png)
 
-If you want to created it automatically, set "Automatically create API access key" to ON in the plugin configure page. API access keys can be created without having each user operate the My account page.
+If you want to created it automatically, set "Automatically create API access key" to ON in the plugin configure page. API access keys can be created without having each user operate the My account page. (With the opt-in above, the key is created on the first page where a customization asks for it.)
 
 ![Screenshot of plugin configure](screenshots/plugin_configure.en.png)
 

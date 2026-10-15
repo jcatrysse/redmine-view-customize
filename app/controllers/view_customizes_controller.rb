@@ -69,6 +69,6 @@ class ViewCustomizesController < ApplicationController
 
   def view_customize_params
     params.require(:view_customize)
-      .permit(:path_pattern, :project_pattern, :customize_type, :code, :is_enabled, :is_private, :insertion_position, :comments)
+      .permit(:path_pattern, :project_pattern, :customize_type, :code, :is_enabled, :is_private, :use_api_key, :insertion_position, :comments)
   end
 end

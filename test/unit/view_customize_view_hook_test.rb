@@ -276,4 +276,51 @@ HTML
 
   end
 
+
+  def api_key_in_head(path, user_id)
+    User.current = User.find(user_id)
+    html = @hook.view_layouts_base_html_head({:request => Request.new(path), :project => @project_ecookbook})
+    JSON.parse(html[/ViewCustomize = \{ context: (.*) \};/, 1])["user"]["apiKey"]
+  end
+
+  def test_api_key_is_only_in_the_page_when_a_customization_asks_for_it
+    with_settings :plugin_view_customize => ActiveSupport::HashWithIndifferentAccess.new('create_api_access_key' => '1') do
+      user = User.find(2)
+      Token.where(:user_id => user.id, :action => 'api').delete_all
+      ViewCustomize.update_all(:use_api_key => false)
+
+      # nothing asks for it: no key in the page and none is created, although the setting is on
+      assert_nil api_key_in_head('/issues', 2)
+      assert_equal 0, Token.where(:user_id => user.id, :action => 'api').count
+
+      # a customization that does not apply to this path, a disabled one and another user's private one do not count
+      ViewCustomize.find(1).update_columns(:use_api_key => true) # path /issues$ (applies below, not on /projects)
+      assert_nil api_key_in_head('/projects', 2)
+      ViewCustomize.find(1).update_columns(:use_api_key => true, :is_enabled => false)
+      assert_nil api_key_in_head('/issues', 2)
+      ViewCustomize.find(1).update_columns(:is_enabled => true, :is_private => true) # author is user 1
+      assert_nil api_key_in_head('/issues', 2)
+      assert_equal 0, Token.where(:user_id => user.id, :action => 'api').count
+
+      # an applicable one asks for it: the key is created and given
+      ViewCustomize.find(1).update_columns(:is_private => false)
+      key = api_key_in_head('/issues', 2)
+      assert_equal user.reload.api_key, key
+      assert key.present?
+
+      # whatever the insertion position of the customization that asks for it
+      ViewCustomize.update_all(:use_api_key => false)
+      ViewCustomize.find(7).update_columns(:use_api_key => true) # issue form position
+      assert_equal key, api_key_in_head('/issues/new', 2)
+    end
+  end
+
+  def test_api_key_is_never_given_to_the_anonymous_user
+    with_settings :plugin_view_customize => ActiveSupport::HashWithIndifferentAccess.new('create_api_access_key' => '1') do
+      ViewCustomize.update_all(:use_api_key => true)
+      assert_no_difference 'Token.count' do
+        assert_nil api_key_in_head('/issues', User.anonymous.id)
+      end
+    end
+  end
 end

@@ -84,7 +84,7 @@ module RedmineViewCustomize
 
     def target_customize?(path, project, insertion_position, item)
       return false unless item.available?
-      return false unless item.insertion_position == insertion_position 
+      return false unless insertion_position.nil? || item.insertion_position == insertion_position
 
       if item.path_pattern.present?
         return false unless path =~ Regexp.new(item.path_pattern)
@@ -96,6 +96,14 @@ module RedmineViewCustomize
       end
 
       return true
+    end
+
+    # True when an enabled customization that applies to this page (any insertion position) uses the API key
+    def api_key_wanted?(context)
+      path = Redmine::CodesetUtil.replace_invalid_utf8(context[:request].path_info)
+      project = context[:project].identifier if context[:project]
+
+      customizes(context).any? {|item| item.use_api_key && target_customize?(path, project, nil, item)}
     end
 
     def to_html(view_customize)
@@ -121,7 +129,10 @@ module RedmineViewCustomize
 
       user = User.current
 
-      if Setting.plugin_view_customize[:create_api_access_key] == "1" and user.api_token.nil?
+      # The key only goes into the page where an active customization asks for it (use_api_key)
+      api_key_wanted = user.logged? && api_key_wanted?(view_hook_context)
+
+      if api_key_wanted and Setting.plugin_view_customize[:create_api_access_key] == "1" and user.api_token.nil?
         # Create API access key
         user.api_key
       end
@@ -136,7 +147,7 @@ module RedmineViewCustomize
           "mail" => user.mail,
           "lastLoginOn" => (user.last_login_on.iso8601 unless user.last_login_on.nil?),
           "groups" => user.groups.map {|group| { "id" => group.id, "name" => group.name }},
-          "apiKey" => (user.api_token.value unless user.api_token.nil?),
+          "apiKey" => (user.api_token.value if api_key_wanted && !user.api_token.nil?),
           # Only the user custom fields the user may see, as core's my/account API does (GEOxyz, 2026-10-12)
           "customFields" => user.visible_custom_field_values.map {|field| { "id" => field.custom_field.id, "name" => field.custom_field.name, "value" => field.value }}
         }

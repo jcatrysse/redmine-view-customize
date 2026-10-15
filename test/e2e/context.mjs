@@ -10,7 +10,7 @@ await removeAll(t);
 await create(t, { position: 'html_bottom', type: 'javascript',
   code: 'document.documentElement.dataset.vcContext = JSON.stringify(ViewCustomize.context);' +
         'var pre = document.createElement("pre"); pre.id = "vc-context"; pre.style.cssText = "font-size:11px;white-space:pre-wrap;padding:8px;border:1px solid #888"; pre.textContent = JSON.stringify(ViewCustomize.context, null, 1); document.body.appendChild(pre);',
-  comments: 'dump the context' });
+  apiKey: true, comments: 'dump the context' });
 // the issue part comes from the "bottom of issue detail" hook
 await create(t, { position: 'issue_show', type: 'javascript',
   code: 'document.documentElement.dataset.vcIssue = JSON.stringify(ViewCustomize.context.issue);', comments: 'issue context' });
@@ -27,7 +27,6 @@ let c = await ctx();
 ensure(c.user.login === 'manager' && c.user.admin === false, `user context wrong: ${JSON.stringify(c.user)}`);
 ensure(c.user.mail === 'manager@example.net', 'user mail missing');
 ensure(Array.isArray(c.user.groups) && Array.isArray(c.user.customFields), 'user groups/customFields missing');
-ensure(c.user.apiKey === null || c.user.apiKey === undefined, `API key created although the setting is off: ${c.user.apiKey}`);
 ensure(c.project && c.project.identifier === 'e2e-project' && c.project.roles.some(r => r.name === 'E2E full'), `project context wrong: ${JSON.stringify(c.project)}`);
 const issue = JSON.parse(await t.page.evaluate(() => document.documentElement.dataset.vcIssue));
 ensure(issue.id === 1 && issue.author.name === 'Redmine Admin', `issue context wrong: ${JSON.stringify(issue)}`);
@@ -48,6 +47,8 @@ await t.login('outsider');
 await t.go('/projects/e2e-project');
 c = await ctx();
 ensure(c.project.roles.some(r => r.name === 'Non member'), `outsider on a public project should have the Non member role, got ${JSON.stringify(c.project.roles)}`);
+// (the outsider never had a key: with the setting off none is created, although the customization opts in)
+ensure(c.user.apiKey === null, `API key created although the setting is off: ${c.user.apiKey}`);
 await t.shot('context-outsider', 'outsider on a public project: roles = Non member');
 await t.anonymous();
 await t.go('/projects/e2e-project');

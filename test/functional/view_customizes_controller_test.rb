@@ -57,15 +57,19 @@ class ViewCustomizesControllerTest < Redmine::ControllerTest
       post :create, :params => {:view_customize => {
         :path_pattern => '/issues$', :project_pattern => 'ecookbook', :code => 'alert(1)',
         :insertion_position => 'html_bottom', :customize_type => 'javascript', :comments => 'c',
-        :is_enabled => 1, :is_private => 1}}
+        :is_enabled => 1, :is_private => 1, :use_api_key => 1}}
     end
     created = ViewCustomize.order(:id).last
     assert_redirected_to "/view_customizes/#{created.id}"
     assert_equal 1, created.author_id
     assert created.is_private
+    assert created.use_api_key
 
     get :show, :params => {:id => created.id}
     assert_response :success
+    assert_select 'th', :text => 'Use API access key'
+    get :edit, :params => {:id => created.id}
+    assert_select 'input[type=checkbox][name="view_customize[use_api_key]"][checked=checked]'
 
     put :update, :params => {:id => created.id, :view_customize => {:code => 'alert(2)', :is_enabled => 0}}
     assert_redirected_to "/view_customizes/#{created.id}"
@@ -77,6 +81,13 @@ class ViewCustomizesControllerTest < Redmine::ControllerTest
       delete :destroy, :params => {:id => created.id}
     end
     assert_redirected_to '/view_customizes'
+  end
+
+  def test_new_form_has_the_api_key_option_off_by_default
+    @request.session[:user_id] = 1
+    get :new
+    assert_select 'input[type=checkbox][name="view_customize[use_api_key]"]'
+    assert_select 'input[type=checkbox][name="view_customize[use_api_key]"][checked]', 0
   end
 
   def test_create_with_invalid_values_is_refused
