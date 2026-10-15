@@ -17,6 +17,13 @@ class ViewCustomizeQueriesTest < Redmine::IntegrationTest
     ActiveSupport::Notifications.unsubscribe(subscriber)
   end
 
+  def setup
+    # With redmine_view_issue_description installed a role needs this permission to open an issue
+    if Redmine::Plugin.installed?(:redmine_view_issue_description)
+      Role.all.each {|role| role.add_permission!(:view_issue_description) }
+    end
+  end
+
   def test_customizations_are_loaded_once_per_request_whatever_the_insertion_points
     log_user('jsmith', 'jsmith')
     positions = [ViewCustomize::INSERTION_POSITION_ISSUE_FORM, ViewCustomize::INSERTION_POSITION_ISSUE_SHOW,
