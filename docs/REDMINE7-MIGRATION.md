@@ -120,7 +120,7 @@ Full text: `docs/DECISIONS-2026-10-07.md`. General: no 5.1 backports, PostgreSQL
 
 | question | Jan's choice | what was done |
 |---|---|---|
-| Sudo mode on the plugin's admin writes (my question 1, from the first report) | not asked of Jan, still open: left as is (upstream), recommendation unchanged | nothing |
+| redmine-view-customize-n2-1: sudo mode on the plugin's admin writes? (round 2, 2026-10-07) | "Zo laten" (Niets verandert voor beheerders, gelijk aan de originele plugin.) | nothing; no code change |
 | redmine-view-customize-q1: fix the dead 'Project pattern' sort link now? | B: "Nu meteen herstellen" (De link werkt meteen, maar de branch wijkt iets meer af van de oorspronkelijke code.) | `project_pattern` added to `sort_update`; functional test `test_index_sorts_by_project_pattern` (fails without it); e2e `crud-list-sorted-project*.png` |
 | redmine-view-customize-q2: check the stored production snippets before the upgrade? | B: "Pas na de upgrade herstellen wat stuk blijkt" (Geen werk vooraf, maar kapotte of dubbel werkende snippets vallen pas op bij gebruikers.) | no code; goes under "After the upgrade" |
 
